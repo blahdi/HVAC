@@ -1,0 +1,212 @@
+alias: "HVAC: Smart Master Control"
+description: "Version: 2026.02.13.28 | Double-Tap Tuya Fix | Explicit Offline Logs"
+triggers:
+  - entity_id:
+      - sensor.home_current_temperature
+      - sensor.bedroom_current_temperature
+      - binary_sensor.home_occupancy
+      - media_player.google_tv
+    trigger: state
+actions:
+  - choose:
+      - conditions:
+          - condition: or
+            conditions:
+              - condition: state
+                entity_id: binary_sensor.home_occupancy
+                state: "on"
+              - condition: state
+                entity_id: media_player.google_tv
+                state: playing
+        sequence:
+          - if:
+              - condition: template
+                alias: Too cold?
+                value_template: >-
+                  {{ states('sensor.home_current_temperature') | is_number and
+                  states('sensor.home_current_temperature') | float < 68 }}
+            then:
+              - target:
+                  entity_id: climate.della_living_room
+                data:
+                  temperature: 72
+                  hvac_mode: heat
+                action: climate.set_temperature
+              - delay: "00:00:01"
+              - target:
+                  entity_id: climate.della_main_door
+                data:
+                  temperature: 72
+                  hvac_mode: heat
+                action: climate.set_temperature
+              - target:
+                  entity_id: input_text.hvac_last_action
+                data:
+                  value: >-
+                    LR Goal: 68F (Occ), Changed: 72F (BOOST). Reasons: Room: {{
+                    states('sensor.home_current_temperature') }}F @ {{
+                    now().astimezone().strftime('%H:%M:%S') }}
+                action: input_text.set_value
+            else:
+              - if:
+                  - condition: template
+                    alias: Reset to 68 if on Boost
+                    value_template: >-
+                      {{ state_attr('climate.della_living_room', 'temperature')
+                      | is_number and state_attr('climate.della_living_room',
+                      'temperature') | float > 68 }}
+                then:
+                  - target:
+                      entity_id: climate.della_living_room
+                    data:
+                      temperature: 68
+                    action: climate.set_temperature
+                  - delay: "00:00:01"
+                  - target:
+                      entity_id: climate.della_main_door
+                    data:
+                      temperature: 68
+                    action: climate.set_temperature
+                  - target:
+                      entity_id: input_text.hvac_last_action
+                    action: input_text.set_value
+                else:
+                  - target:
+                      entity_id: input_text.hvac_last_action
+                    data:
+                      value: >
+                        {% set cur = states('sensor.home_current_temperature')
+                        %} {% set tar = state_attr('climate.della_living_room',
+                        'temperature') %} LR Goal: 68F (Occ), Changed: NONE.
+                        Reasons: Room: {{ cur if cur|is_number else 'OFFLINE'
+                        }}F, Target: {{ tar if tar|is_number else 'OFFLINE' }}F
+                        @ {{ now().astimezone().strftime('%H:%M:%S') }}
+                    action: input_text.set_value
+      - conditions:
+          - condition: state
+            entity_id: binary_sensor.home_occupancy
+            state: "off"
+          - condition: template
+            value_template: "{{ not is_state('media_player.google_tv', 'playing') }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: >-
+                  {{ states('sensor.home_current_temperature') | is_number and
+                  states('sensor.home_current_temperature') | float < 66 }}
+            then:
+              - target:
+                  entity_id: climate.della_living_room
+                data:
+                  temperature: 70
+                  hvac_mode: heat
+                action: climate.set_temperature
+              - delay: "00:00:01"
+              - target:
+                  entity_id: climate.della_main_door
+                data:
+                  temperature: 70
+                  hvac_mode: heat
+                action: climate.set_temperature
+              - target:
+                  entity_id: input_text.hvac_last_action
+                data:
+                  value: >-
+                    LR Goal: 66F (Away), Changed: 70F (ECO BOOST). Reasons:
+                    Room: {{ states('sensor.home_current_temperature') }}F @ {{
+                    now().astimezone().strftime('%H:%M:%S') }}
+                action: input_text.set_value
+            else:
+              - if:
+                  - condition: template
+                    value_template: >-
+                      {{ state_attr('climate.della_living_room', 'temperature')
+                      | is_number and state_attr('climate.della_living_room',
+                      'temperature') | float > 66 }}
+                then:
+                  - target:
+                      entity_id: climate.della_living_room
+                    data:
+                      temperature: 66
+                    action: climate.set_temperature
+                  - delay: "00:00:01"
+                  - target:
+                      entity_id: climate.della_main_door
+                    data:
+                      temperature: 66
+                    action: climate.set_temperature
+                  - target:
+                      entity_id: input_text.hvac_last_action
+                    data:
+                      value: >-
+                        LR Goal: 66F (Away), Changed: 66F (MAINTAIN). Reasons:
+                        Room: {{ states('sensor.home_current_temperature') }}F @
+                        {{ now().astimezone().strftime('%H:%M:%S') }}
+                    action: input_text.set_value
+                else:
+                  - target:
+                      entity_id: input_text.hvac_last_action
+                    data:
+                      value: >
+                        {% set cur = states('sensor.home_current_temperature')
+                        %} {% set tar = state_attr('climate.della_living_room',
+                        'temperature') %} LR Goal: 66F (Away), Changed: NONE.
+                        Reasons: Room: {{ cur if cur|is_number else 'OFFLINE'
+                        }}F, Target: {{ tar if tar|is_number else 'OFFLINE' }}F
+                        @ {{ now().astimezone().strftime('%H:%M:%S') }}
+                    action: input_text.set_value
+  - if:
+      - condition: template
+        value_template: >-
+          {{ states('sensor.bedroom_current_temperature') | is_number and
+          states('sensor.bedroom_current_temperature') | float < 67 }}
+    then:
+      - target:
+          entity_id: climate.della_bedroom
+        data:
+          temperature: 71
+          hvac_mode: heat
+        action: climate.set_temperature
+      - target:
+          entity_id: input_text.hvac_last_action
+        data:
+          value: >-
+            BR Goal: 67F, Changed: 71F (BOOST). Reasons: Room: {{
+            states('sensor.bedroom_current_temperature') }}F @ {{
+            now().astimezone().strftime('%H:%M:%S') }}
+        action: input_text.set_value
+    else:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ state_attr('climate.della_bedroom', 'temperature') | is_number
+              and state_attr('climate.della_bedroom', 'temperature') | float >
+              67 }}
+        then:
+          - target:
+              entity_id: climate.della_bedroom
+            data:
+              temperature: 67
+            action: climate.set_temperature
+          - target:
+              entity_id: input_text.hvac_last_action
+            data:
+              value: >-
+                BR Goal: 67F, Changed: 67F (MAINTAIN). Reasons: Room: {{
+                states('sensor.bedroom_current_temperature') }}F @ {{
+                now().astimezone().strftime('%H:%M:%S') }}
+            action: input_text.set_value
+        else:
+          - target:
+              entity_id: input_text.hvac_last_action
+            data:
+              value: >
+                {% set br_cur = states('sensor.bedroom_current_temperature') %}
+                {% set br_tar = state_attr('climate.della_bedroom',
+                'temperature') %} BR Goal: 67F, Changed: NONE. Reasons: Room: {{
+                br_cur if br_cur|is_number else 'OFFLINE' }}F, Target: {{ br_tar
+                if br_tar|is_number else 'OFFLINE' }}F @ {{
+                now().astimezone().strftime('%H:%M:%S') }}
+            action: input_text.set_value
+mode: restart
+

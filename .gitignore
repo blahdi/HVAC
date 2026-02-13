@@ -1,0 +1,14 @@
+# .gitignore in /home/pi/
+/*
+!/homeassistant/
+!/homeassistant/config/
+!/homeassistant/config/configuration.yaml
+!/homeassistant/docker-compose.yml
+!/tuya-bridge/
+!/tuya-bridge/bridge.py
+!/tuya-bridge/docker-compose.yml
+!/tuya-bridge/mosquitto/
+!/tuya-bridge/mosquitto/config/
+!/tuya-bridge/mosquitto/config/mosquitto.conf
+!.gitignore
+!README.md

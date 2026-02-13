@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  tuya-bridge:
+    build: .
+    image: tuya/tuya-iot-link-sdk-python:latest
+    container_name: tuya-bridge-app
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      - DEVICE_ID=eb43fe0ed2c8be5220tg2u
+      - LOCAL_KEY=${ENV_LOCAL_KEY}
+      - IP_ADDRESS=192.168.1.27
+      - VERSION=3.4
+      - POLL_INTERVAL=5
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - MQTT_USER=${ENV_MQTT_USER}
+      - MQTT_PASS=${ENV_MQTT_PASS}
+    depends_on:
+      - mosquitto
+    volumes:
+      - ./config:/app/config
+    networks:
+      - tuya-iot-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+    networks:
+      - tuya-iot-net
+
+networks:
+  tuya-iot-net:
+    driver: bridge
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:

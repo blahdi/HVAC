@@ -1,0 +1,38 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+mqtt:
+  discovery: true
+  discovery_prefix: homeassistant
+  sensor:
+    - name: "Tuya Bridge Voltage"
+      unique_id: "tuya_bridge_voltage"
+      state_topic: "tuya/bridge/voltage"
+      unit_of_measurement: "V"
+      device_class: "voltage"
+      state_class: "measurement"
+      value_template: "{{ value }}"
+
+    - name: "Tuya Bridge Current"
+      unique_id: "tuya_bridge_current"
+      state_topic: "tuya/bridge/current"
+      unit_of_measurement: "A"
+      device_class: "current"
+      state_class: "measurement"
+      value_template: "{{ value }}"
+
+    - name: "Tuya Bridge Power"
+      unique_id: "tuya_bridge_power"
+      state_topic: "tuya/bridge/power"
+      unit_of_measurement: "W"
+      device_class: "power"
+      state_class: "measurement"
+      value_template: "{{ value }}"

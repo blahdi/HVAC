@@ -7,3 +7,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     network_mode: host
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW

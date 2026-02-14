@@ -2,77 +2,85 @@ title: "HVAC AI Monitor"
 views:
   - title: "Overview"
     path: overview
+    type: panel
     cards:
-      - type: vertical-stack
+      - type: horizontal-stack
         cards:
-          # --- CARD 1: AI STRATEGY ---
-          - type: entities
-            title: "AI Strategy"
-            show_header_toggle: false
-            entities:
-              - entity: automation.hvac_pse_ai_integrated_new
-                name: "AI Master Control"
-              - entity: sensor.heating_cost_comparison
-                name: "Optimal Source (Price)"
-              - type: section
-                label: "Switch Thresholds"
-              - entity: sensor.home_current_temperature
-                name: "Furnace if House < 66.5°F"
-              - entity: sensor.bedroom_temperature
-                name: "Bedroom HP if < 69.5°F"
-
-          # --- CARD 2: LIVE PERFORMANCE DIALS ---
-          - type: horizontal-stack
+          # --- COLUMN 1: AI STRATEGY ---
+          - type: vertical-stack
             cards:
-              - type: gauge
-                entity: sensor.total_hvac_power
-                name: "HP Power Draw"
-                unit: "W"
-                min: 0
-                max: 3000
-                severity:
-                  green: 0
-                  yellow: 1500
-                  red: 2500
-              - type: gauge
-                entity: sensor.heatpump_total_current
-                name: "HP Amps"
-                unit: "A"
-                min: 0
-                max: 15
-                severity:
-                  green: 0
-                  yellow: 8
-                  red: 12
+              - type: entities
+                title: "AI Strategy"
+                show_header_toggle: false
+                entities:
+                  - entity: automation.hvac_pse_ai_integrated_new
+                    name: "Automated-Temp-Control"
+                  - type: section
+                    label: "Occupancy Sensors"
+                  - entity: binary_sensor.home_occupancy
+                    name: "House Occupied"
+                  - entity: binary_sensor.bedroom_occupancy
+                    name: "Bedroom Occupied"
+                  - entity: media_player.living_room_tv_2
+                    name: "Living Room TV"
+                  - type: section
+                    label: "Home Target vs Actual"
+                  - type: attribute
+                    entity: climate.della_living_room
+                    attribute: temperature
+                    name: "House Target"
+                    suffix: "°F"
+                  - entity: sensor.home_current_temperature
+                    name: "House Current"
+                  - type: section
+                    label: "Bedroom Target vs Actual"
+                  - type: attribute
+                    entity: climate.della_mini_master_bedroom
+                    attribute: temperature
+                    name: "Bedroom Target"
+                    suffix: "°F"
+                  - entity: sensor.bedroom_temperature
+                    name: "Bedroom Current"
 
-          # --- CARD 3: HARDWARE STATUS ---
-          - type: entities
-            title: "Hardware Status"
-            show_header_toggle: false
-            entities:
-              - entity: climate.home
-                name: "Main House Furnace"
-              - type: divider
-              - entity: climate.della_mini_master_bedroom
-                name: "DELLA Master Bedroom"
-              - entity: climate.della_living_room
-                name: "DELLA Living Room"
-              - entity: climate.della_main_door
-                name: "DELLA Main Door"
-              - entity: climate.della_mini_guest
-                name: "DELLA Guest Room"
-              - type: section
-                label: "Environmental Data"
-              - entity: sensor.home_current_temperature
-                name: "House Temp"
-              - entity: sensor.bedroom_temperature
-                name: "Bedroom Temp"
-              - entity: sensor.hvac_total_energy_adjusted
-                name: "Total HP Energy Usage"
+          # --- COLUMN 2: GAUGES & HARDWARE ---
+          - type: vertical-stack
+            cards:
+              - type: horizontal-stack
+                cards:
+                  - type: gauge
+                    entity: sensor.total_hvac_power
+                    name: "Power Draw"
+                    unit: "W"
+                    max: 3000
+                  - type: gauge
+                    entity: sensor.heatpump_total_current
+                    name: "Amps"
+                    unit: "A"
+                    max: 15
+              - type: entities
+                title: "Hardware Status"
+                show_header_toggle: false
+                entities:
+                  - entity: climate.home
+                    name: "Main Furnace"
+                    secondary_info: last-changed
+                  # NEW SENSOR BELOW
+                  - entity: binary_sensor.hvac_energy_monitor_hvac_activity_status
+                    name: "Heat Pump System"
+                    icon: mdi:heating-coil
+                  - entity: climate.della_mini_master_bedroom
+                    name: "Master BR HP"
+                    secondary_info: last-changed
+                  - entity: climate.della_living_room
+                    name: "Living Room HP"
+                    secondary_info: last-changed
 
-          # --- SECTION 3: DECISION HISTORY ---
-          - type: logbook
-            title: "AI Decision History"
-            entities:
-              - input_text.hvac_last_action
-            hours_to_show: 24
+
+          # --- COLUMN 3: DECISION HISTORY ---
+          - type: vertical-stack
+            cards:
+              - type: logbook
+                title: "AI Decision History"
+                entities:
+                  - input_text.hvac_last_action
+                hours_to_show: 24

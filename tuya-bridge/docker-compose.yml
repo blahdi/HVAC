@@ -21,7 +21,8 @@ services:
     depends_on:
       - mosquitto
     volumes:
-      - ./config:/app/config
+      - .:/app
+    command: python3 bridge.py
     networks:
       - tuya-iot-net
     logging:

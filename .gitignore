@@ -3,6 +3,7 @@
 !/homeassistant/
 !/homeassistant/config/
 !/homeassistant/config/configuration.yaml
+!/homeassistant/config/automations.yaml
 !/homeassistant/docker-compose.yml
 !/tuya-bridge/
 !/tuya-bridge/bridge.py

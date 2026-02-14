@@ -1,7 +1,7 @@
 # =============================================================================
 # FILE: configuration.yaml
-# VERSION: 2026.02.13.5
-# DESCRIPTION: Core Config with PSE-Integrated Cost Logic & MQTT
+# VERSION: 2026.02.14.1
+# DESCRIPTION: Core Config with PSE-Integrated Cost Logic & MQTT + Toggle
 # =============================================================================
 
 default_config:
@@ -40,8 +40,8 @@ mqtt:
       unit_of_measurement: "W"
       device_class: "power"
       state_class: "measurement"
-      # Adding | float(0) ensures the result is always a number (0) even if empty
       value_template: "{{ value | float(0) }}"
+
 # -----------------------------------------------------------------------------
 # SOURCE-CONTROLLED INPUTS (Rates & Toggles)
 # -----------------------------------------------------------------------------
@@ -52,7 +52,7 @@ input_number:
     max: 0.30
     step: 0.01
     unit_of_measurement: "$/kWh"
-    initial: 0.12 # PSE Tier 1 baseline
+    initial: 0.12 
   
   pse_fallback_gas_rate:
     name: "PSE Fallback Gas Rate"
@@ -60,7 +60,12 @@ input_number:
     max: 2.50
     step: 0.10
     unit_of_measurement: "$/therm"
-    initial: 1.25 # 2026 average rate
+    initial: 1.25
+
+input_boolean:
+  hvac_automation_enabled:
+    name: "Automated Furnace Control"
+    icon: mdi:fire-circle
 
 # -----------------------------------------------------------------------------
 # COST DECISION ENGINE (The "Brain")
@@ -87,14 +92,26 @@ template:
           {% if cost_hp < cost_furnace %} heat_pump {% else %} furnace {% endif %}
         attributes:
           recommendation: >
-             {{ "Efficient Mini-Split" if (states('sensor.heating_cost_comparison') == 'heat_pump') else "Stable Gas Furnace" }}
+              {{ "Efficient Mini-Split" if (states('sensor.heating_cost_comparison') == 'heat_pump') else "Stable Gas Furnace" }}
 
 lovelace:
   mode: storage
   dashboards:
-    hvac-advanced: # This is the URL slug
+    hvac-advanced:
       mode: yaml
       title: "HVAC AI Monitor"
       icon: mdi:gauge
       show_in_sidebar: true
-      filename: dashboards/hvac_monitor.yaml # Path must be relative to /config/
+      filename: dashboards/hvac_monitor.yaml
+
+# -----------------------------------------------------------------------------
+# CLIMATE GROUPS
+# -----------------------------------------------------------------------------
+climate:
+  - platform: climate_group
+    name: "All Heat Pumps"
+    entities:
+      - climate.della_main_door
+      - climate.della_master_bedroom
+      - climate.della_living_room
+      - climate.della_mini_guest

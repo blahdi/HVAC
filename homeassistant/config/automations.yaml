@@ -1,94 +1,62 @@
+# =============================================================================
+# FILE: automations.yaml
+# VERSION: 2026.02.14.25
+# =============================================================================
+
 - alias: "Automated-Temp-Control"
   id: hvac_pse_ai_integrated_new
   trigger:
     - platform: time_pattern
       minutes: "/5"
+    - platform: state
+      entity_id: 
+        - binary_sensor.home_occupancy
+        - input_boolean.hvac_automation_enabled
   action:
-    # 1. BEDROOM LOGIC
-    - choose:
-        # Occupied 8PM - 11AM -> 66F
-        - conditions:
-            - condition: state
-              entity_id: binary_sensor.bedroom_occupancy
-              state: "on"
-            - condition: or
-              conditions:
-                - condition: time
-                  after: "20:00:00"
-                - condition: time
-                  before: "11:00:00"
-          sequence:
-            - service: climate.set_temperature
-              target: { entity_id: climate.della_mini_master_bedroom }
-              data: { temperature: 66 }
-            - service: input_text.set_value
-              target: { entity_id: input_text.hvac_last_action }
-              data: { value: "Result: BR Night Occupied. Target 66F." }
-
-        # Occupied 11AM - 8PM -> 68F
-        - conditions:
-            - condition: state
-              entity_id: binary_sensor.bedroom_occupancy
-              state: "on"
-          sequence:
-            - service: climate.set_temperature
-              target: { entity_id: climate.della_mini_master_bedroom }
-              data: { temperature: 68 }
-            - service: input_text.set_value
-              target: { entity_id: input_text.hvac_last_action }
-              data: { value: "Result: BR Day Occupied. Target 68F." }
-
-        # Unoccupied -> 65F
-        - conditions:
-            - condition: state
-              entity_id: binary_sensor.bedroom_occupancy
-              state: "off"
-          sequence:
-            - service: climate.set_temperature
-              target: { entity_id: climate.della_mini_master_bedroom }
-              data: { temperature: 65 }
-            - service: input_text.set_value
-              target: { entity_id: input_text.hvac_last_action }
-              data: { value: "Result: BR Unoccupied. Target 65F." }
-
-    # 2. HOUSE LOGIC
-    - service: climate.set_temperature
-      target:
-        entity_id: 
-          - climate.della_living_room
-          - climate.della_main_door
-      data:
-        temperature: >
-          {# Use the TV ID from your dashboard that shows Netflix active #}
-          {% set tv = 'media_player.living_room_tv_2' %}
-          {% if is_state('binary_sensor.home_occupancy', 'on') 
-             or (states(tv) not in ['off', 'unavailable', 'unknown', 'idle']) %}
-            68
-          {% else %}
-            65
-          {% endif %}
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: 
-          - climate.della_living_room
-          - climate.della_main_door
-      data: { hvac_mode: "heat" }
-    - service: input_text.set_value
-      target: { entity_id: input_text.hvac_last_action }
-      data: { value: "Result: House Target 68F (TV/Occupancy Active)" }
-
-    # 3. FURNACE SAFETY BACKUP
+    - variables:
+        mode_val: "{% if is_state('input_boolean.hvac_automation_enabled', 'on') %}AI{% else %}MAN{% endif %}"
+        occ_status: "{% if is_state('binary_sensor.home_occupancy', 'on') %}Occupied{% else %}Idle{% endif %}"
+        new_status: "Furnace | {{ occ_status }} | -- | {{ mode_val }}"
+    
     - if:
-        - condition: numeric_state
-          entity_id: sensor.home_current_temperature
-          below: 65
+        - condition: template
+          value_template: "{{ states('input_text.hvac_last_action_db') != new_status }}"
       then:
-        - service: climate.set_hvac_mode
-          target: { entity_id: climate.home }
-          data: { hvac_mode: "heat" }
+        - service: input_text.set_value
+          target:
+            entity_id: input_text.hvac_last_action_db
+          data:
+            value: "{{ new_status }}"
+
+    - if:
+        - condition: state
+          entity_id: input_boolean.hvac_automation_enabled
+          state: "on"
+      then:
         - service: climate.set_temperature
           target: { entity_id: climate.home }
+          data:
+            temperature: >
+              {% if is_state('binary_sensor.home_occupancy', 'on') %} 68 {% else %} 65 {% endif %}
+
+    - if:
+        - condition: state
+          entity_id: binary_sensor.bedroom_occupancy
+          state: "on"
+      then:
+        - service: climate.set_temperature
+          target: { entity_id: climate.della_mini_master_bedroom }
           data: { temperature: 68 }
-        - service: input_text.set_value
-          target: { entity_id: input_text.hvac_last_action }
-          data: { value: "CRITICAL: House < 65F. Furnace Engaged." }
+
+- alias: "Furnace: Restore Schedule"
+  id: furnace_restore_default
+  trigger:
+    - platform: state
+      entity_id: input_boolean.hvac_automation_enabled
+      to: "off"
+  action:
+    - service: button.press
+      target: { entity_id: button.home_clear_hold }
+    - service: input_text.set_value
+      target: { entity_id: input_text.hvac_last_action_db }
+      data: { value: "Furnace | Manual | -- | MAN" }

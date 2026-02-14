@@ -1,86 +1,80 @@
+# =============================================================================
+# FILE: hvac_monitor.yaml
+# VERSION: 2026.02.14.53
+# =============================================================================
+
 title: "HVAC AI Monitor"
 views:
   - title: "Overview"
     path: overview
-    type: panel
+    type: masonry
     cards:
-      - type: horizontal-stack
+      - type: vertical-stack
         cards:
-          # --- COLUMN 1: AI STRATEGY ---
-          - type: vertical-stack
-            cards:
-              - type: entities
-                title: "AI Strategy"
-                show_header_toggle: false
-                entities:
-                  - entity: automation.hvac_pse_ai_integrated_new
-                    name: "Automated-Temp-Control"
-                  - type: section
-                    label: "Occupancy Sensors"
-                  - entity: binary_sensor.home_occupancy
-                    name: "House Occupied"
-                  - entity: binary_sensor.bedroom_occupancy
-                    name: "Bedroom Occupied"
-                  - entity: media_player.living_room_tv_2
-                    name: "Living Room TV"
-                  - type: section
-                    label: "Home Target vs Actual"
-                  - type: attribute
-                    entity: climate.della_living_room
-                    attribute: temperature
-                    name: "House Target"
-                    suffix: "°F"
-                  - entity: sensor.home_current_temperature
-                    name: "House Current"
-                  - type: section
-                    label: "Bedroom Target vs Actual"
-                  - type: attribute
-                    entity: climate.della_mini_master_bedroom
-                    attribute: temperature
-                    name: "Bedroom Target"
-                    suffix: "°F"
-                  - entity: sensor.bedroom_temperature
-                    name: "Bedroom Current"
+          - type: entities
+            title: "Climate-Automation"
+            show_header_toggle: false
+            entities:
+              - entity: automation.hvac_pse_ai_integrated_new
+                name: "Enable Climate Automation"
+              - entity: binary_sensor.home_occupancy
+              - entity: binary_sensor.bedroom_occupancy
 
-          # --- COLUMN 2: GAUGES & HARDWARE ---
-          - type: vertical-stack
-            cards:
-              - type: horizontal-stack
-                cards:
-                  - type: gauge
-                    entity: sensor.total_hvac_power
-                    name: "Power Draw"
-                    unit: "W"
-                    max: 3000
-                  - type: gauge
-                    entity: sensor.heatpump_total_current
-                    name: "Amps"
-                    unit: "A"
-                    max: 15
-              - type: entities
-                title: "Hardware Status"
-                show_header_toggle: false
-                entities:
-                  - entity: climate.home
-                    name: "Main Furnace"
-                    secondary_info: last-changed
-                  # NEW SENSOR BELOW
-                  - entity: binary_sensor.hvac_energy_monitor_hvac_activity_status
-                    name: "Heat Pump System"
-                    icon: mdi:heating-coil
-                  - entity: climate.della_mini_master_bedroom
-                    name: "Master BR HP"
-                    secondary_info: last-changed
-                  - entity: climate.della_living_room
-                    name: "Living Room HP"
-                    secondary_info: last-changed
+          - type: entities
+            title: "Gas Furnace"
+            entities:
+              - entity: input_boolean.hvac_automation_enabled
+              - entity: climate.home
 
+          - type: entities
+            title: "Heat Pump Units"
+            entities:
+              - entity: binary_sensor.hvac_energy_monitor_hvac_activity_status
+                name: "Compressor State"
+              - entity: climate.della_living_room
+              - entity: climate.della_mini_master_bedroom
+              - entity: climate.della_main_door
+              - entity: climate.della_mini_guest
 
-          # --- COLUMN 3: DECISION HISTORY ---
-          - type: vertical-stack
+          - type: markdown
+            content: "Dashboard Version: **2026.02.14.53**"
+
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            title: "Climate Automation History"
+            content: |
+              <div style="overflow-x:auto; font-family: 'Courier New', monospace; line-height: 1.4;">
+              <pre>
+              <b>TIME   ZONE     STATUS     TARGET  MODE</b>
+              <hr style="margin: 5px 0; border-top: 1px solid #444;">
+              {% set hist = state_attr('sensor.hvac_story_database', 'history') %}
+              {% if hist is not none and hist is iterable %}
+                {% for e in hist %}
+                {{ e.time.ljust(7) }}{{ e.zone.ljust(9) }}{{ e.status.ljust(11) }}{{ e.target.ljust(8) }}{{ e.mode }}
+                {% endfor %}
+              {% else %}
+              No history recorded. Toggle automation to begin.
+              {% endif %}
+              </pre>
+              </div>
+
+          - type: horizontal-stack
             cards:
-              - type: logbook
-                title: "AI Decision History"
-                entities:
-                  - input_text.hvac_last_action
-                hours_to_show: 24
+              - type: gauge
+                entity: sensor.total_hvac_power
+                name: "Power Draw"
+                max: 3000
+              - type: gauge
+                entity: sensor.heatpump_total_current
+                name: "Amps"
+                max: 15
+
+          - type: entities
+            entities:
+              - entity: sensor.tuya_bridge_voltage
+
+          - type: history-graph
+            entities:
+              - entity: sensor.total_hvac_power
+            hours_to_show: 12

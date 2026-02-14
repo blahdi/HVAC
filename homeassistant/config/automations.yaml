@@ -1,0 +1,58 @@
+- id: hvac_pse_ai_integrated_new
+  alias: "Automated heat-pump furnace control"
+  initial_state: true
+
+  trigger:
+    - platform: state
+      entity_id: 
+        - sensor.heating_cost_comparison
+        - sensor.home_current_temperature
+        - sensor.bedroom_temperature
+    - platform: time_pattern
+      minutes: "/15"
+
+  action:
+    - variables:
+        # Define current values for the text string
+        br_temp: "{{ states('sensor.bedroom_temperature') }}"
+        house_temp: "{{ states('sensor.home_current_temperature') }}"
+        # Define what the result is (we'll update this in the logic below)
+        action_result: >
+          {% if states('sensor.bedroom_temperature') | float(100) <= 69.5 %} Heating BR (HP)
+          {% elif states('sensor.home_current_temperature') | float(100) <= 66.5 and states('sensor.heating_cost_comparison') == 'Furnace' %} Heating House (Furnace)
+          {% else %} Idle
+          {% endif %}
+
+    # THIS UPDATES YOUR TEXT BOX TO THE FORMAT YOU LIKE
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.hvac_last_action
+      data:
+        value: "Result: {{ action_result }}. (Temps: BR {{ br_temp }}F / House {{ house_temp }}F)"
+
+    - choose:
+        # FURNACE LOGIC
+        - conditions:
+            - condition: template
+              value_template: "{{ states('sensor.heating_cost_comparison') == 'Furnace' }}"
+            - condition: template
+              value_template: "{{ states('sensor.home_current_temperature') | float(100) <= 66.5 }}"
+          sequence:
+            - service: climate.set_temperature
+              target:
+                entity_id: climate.home
+              data:
+                temperature: 68
+                hvac_mode: heat
+
+        # MASTER BEDROOM HP LOGIC
+        - conditions:
+            - condition: template
+              value_template: "{{ states('sensor.bedroom_temperature') | float(100) <= 69.5 }}"
+          sequence:
+            - service: climate.set_temperature
+              target:
+                entity_id: climate.della_mini_master_bedroom
+              data:
+                temperature: 70
+                hvac_mode: heat

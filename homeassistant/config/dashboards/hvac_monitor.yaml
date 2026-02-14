@@ -1,0 +1,78 @@
+title: "HVAC AI Monitor"
+views:
+  - title: "Overview"
+    path: overview
+    cards:
+      - type: vertical-stack
+        cards:
+          # --- CARD 1: AI STRATEGY ---
+          - type: entities
+            title: "AI Strategy"
+            show_header_toggle: false
+            entities:
+              - entity: automation.hvac_pse_ai_integrated_new
+                name: "AI Master Control"
+              - entity: sensor.heating_cost_comparison
+                name: "Optimal Source (Price)"
+              - type: section
+                label: "Switch Thresholds"
+              - entity: sensor.home_current_temperature
+                name: "Furnace if House < 66.5°F"
+              - entity: sensor.bedroom_temperature
+                name: "Bedroom HP if < 69.5°F"
+
+          # --- CARD 2: LIVE PERFORMANCE DIALS ---
+          - type: horizontal-stack
+            cards:
+              - type: gauge
+                entity: sensor.total_hvac_power
+                name: "HP Power Draw"
+                unit: "W"
+                min: 0
+                max: 3000
+                severity:
+                  green: 0
+                  yellow: 1500
+                  red: 2500
+              - type: gauge
+                entity: sensor.heatpump_total_current
+                name: "HP Amps"
+                unit: "A"
+                min: 0
+                max: 15
+                severity:
+                  green: 0
+                  yellow: 8
+                  red: 12
+
+          # --- CARD 3: HARDWARE STATUS ---
+          - type: entities
+            title: "Hardware Status"
+            show_header_toggle: false
+            entities:
+              - entity: climate.home
+                name: "Main House Furnace"
+              - type: divider
+              - entity: climate.della_mini_master_bedroom
+                name: "DELLA Master Bedroom"
+              - entity: climate.della_living_room
+                name: "DELLA Living Room"
+              - entity: climate.della_main_door
+                name: "DELLA Main Door"
+              - entity: climate.della_mini_guest
+                name: "DELLA Guest Room"
+              - type: section
+                label: "Environmental Data"
+              - entity: sensor.home_current_temperature
+                name: "House Temp"
+              - entity: sensor.bedroom_temperature
+                name: "Bedroom Temp"
+              - entity: sensor.hvac_total_energy_adjusted
+                name: "Total HP Energy Usage"
+
+          # --- SECTION 3: DECISION HISTORY ---
+          - type: logbook
+            title: "AI Decision History"
+            entities:
+              - input_text.hvac_last_action
+            hours_to_show: 24

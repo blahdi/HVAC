@@ -1,8 +1,7 @@
 # =============================================================================
 # FILE: automations.yaml
-# VERSION: 2026.02.14.25
+# VERSION: 2026.02.14.60
 # =============================================================================
-
 - alias: "Automated-Temp-Control"
   id: hvac_pse_ai_integrated_new
   trigger:
@@ -11,42 +10,77 @@
     - platform: state
       entity_id: 
         - binary_sensor.home_occupancy
+        - binary_sensor.bedroom_occupancy
         - input_boolean.hvac_automation_enabled
+        - input_boolean.heatpump_automation_enabled
   action:
+    # --- 1. FURNACE (Hardware: Furnace | Zone: Home) ---
     - variables:
-        mode_val: "{% if is_state('input_boolean.hvac_automation_enabled', 'on') %}AI{% else %}MAN{% endif %}"
-        occ_status: "{% if is_state('binary_sensor.home_occupancy', 'on') %}Occupied{% else %}Idle{% endif %}"
-        new_status: "Furnace | {{ occ_status }} | -- | {{ mode_val }}"
+        f_on: "{{ is_state('input_boolean.hvac_automation_enabled', 'on') }}"
+        home_occ: "{{ is_state('binary_sensor.home_occupancy', 'on') }}"
+        f_target: "{{ 68 if home_occ else 65 }}"
     
-    - if:
-        - condition: template
-          value_template: "{{ states('input_text.hvac_last_action_db') != new_status }}"
-      then:
-        - service: input_text.set_value
-          target:
-            entity_id: input_text.hvac_last_action_db
-          data:
-            value: "{{ new_status }}"
+    - service: input_text.set_value
+      target: { entity_id: input_text.hvac_last_action_db }
+      data:
+        value: >
+          {% set status = ('Occupied' if home_occ else 'Idle') if f_on else 'Manual' %}
+          Furnace | Home | {{ status }} | {{ f_target }}F | {{ 'Auto' if f_on else 'Manual' }}
 
     - if:
-        - condition: state
-          entity_id: input_boolean.hvac_automation_enabled
-          state: "on"
+        - condition: template
+          value_template: "{{ f_on }}"
       then:
         - service: climate.set_temperature
           target: { entity_id: climate.home }
           data:
-            temperature: >
-              {% if is_state('binary_sensor.home_occupancy', 'on') %} 68 {% else %} 65 {% endif %}
+            temperature: "{{ f_target }}"
 
+    # --- 2. HEATPUMP GLOBAL (Hardware: HeatPump | Zone: Home) ---
+    - variables:
+        hp_on: "{{ is_state('input_boolean.heatpump_automation_enabled', 'on') }}"
+    
+    - service: input_text.set_value
+      target: { entity_id: input_text.hvac_last_action_db }
+      data:
+        value: "HeatPump | Home | Global | -- | {{ 'Auto' if hp_on else 'Manual' }}"
+
+    # --- 3. HEATPUMP ROOM ACTIONS ---
     - if:
-        - condition: state
-          entity_id: binary_sensor.bedroom_occupancy
-          state: "on"
+        - condition: template
+          value_template: "{{ hp_on }}"
       then:
+        # Master Bedroom Zone
+        - service: climate.set_hvac_mode
+          target: { entity_id: climate.della_mini_master_bedroom }
+          data: { hvac_mode: "heat" }
         - service: climate.set_temperature
           target: { entity_id: climate.della_mini_master_bedroom }
           data: { temperature: 68 }
+        - service: input_text.set_value
+          target: { entity_id: input_text.hvac_last_action_db }
+          data:
+            value: >
+              {% set br_status = 'Occupied' if is_state('binary_sensor.bedroom_occupancy', 'on') else 'Idle' %}
+              HeatPump | Bedroom | {{ br_status }} | 68F | Auto
+
+        # Living Room Zone (Dual-Handler: Main + Door)
+        - service: climate.set_hvac_mode
+          target: 
+            entity_id: 
+              - climate.della_living_room
+              - climate.della_main_door
+          data: { hvac_mode: "heat" }
+        - service: climate.set_temperature
+          target: 
+            entity_id: 
+              - climate.della_living_room
+              - climate.della_main_door
+          data: { temperature: 68 }
+        - service: input_text.set_value
+          target: { entity_id: input_text.hvac_last_action_db }
+          data:
+            value: "HeatPump | Living Room | Dual-Handler | 68F | Auto"
 
 - alias: "Furnace: Restore Schedule"
   id: furnace_restore_default
@@ -57,6 +91,3 @@
   action:
     - service: button.press
       target: { entity_id: button.home_clear_hold }
-    - service: input_text.set_value
-      target: { entity_id: input_text.hvac_last_action_db }
-      data: { value: "Furnace | Manual | -- | MAN" }

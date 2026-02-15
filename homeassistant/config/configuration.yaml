@@ -1,8 +1,7 @@
 # =============================================================================
 # FILE: configuration.yaml
-# VERSION: 2026.02.14.47
+# VERSION: 2026.02.14.85
 # =============================================================================
-
 default_config:
 frontend:
   themes: !include_dir_merge_named themes
@@ -19,7 +18,6 @@ mqtt:
       device_class: "power"
       state_class: "measurement"
       value_template: "{{ value | float(0) }}"
-      force_update: true
     - name: "Heatpump Total Current"
       unique_id: "tuya_a_final_lock"
       state_topic: "tuya/energy/clamp1_current"
@@ -27,14 +25,12 @@ mqtt:
       device_class: "current"
       state_class: "measurement"
       value_template: "{{ value | float(0) }}"
-      force_update: true
     - name: "Tuya Bridge Voltage"
       unique_id: "tuya_v_final_lock"
       state_topic: "tuya/energy/voltage"
       unit_of_measurement: "V"
       device_class: "voltage"
       state_class: "measurement"
-      force_update: true
 
 input_text:
   hvac_last_action_db:
@@ -44,37 +40,28 @@ input_text:
 input_boolean:
   hvac_automation_enabled:
     name: "Furnace Automation Enabled"
+  heatpump_automation_enabled:
+    name: "Heatpump Automation Enabled"
 
 template:
   - trigger:
       - platform: state
         entity_id: input_text.hvac_last_action_db
+      - platform: homeassistant
+        event: start
     sensor:
-      - name: "HVAC Story Database"
-        unique_id: "hvac_story_db_permanent"
+      - name: "HVAC Event Log"
+        unique_id: "hvac_event_log_fixed"
         state: "{{ now().strftime('%H:%M') }}"
         attributes:
-          history: >
-            {% set current = state_attr('sensor.hvac_story_database', 'history') or [] %}
+          table_data: >
+            {% set old = state_attr('sensor.hvac_event_log', 'table_data') or "" %}
             {% set raw = states('input_text.hvac_last_action_db') %}
-            {% if raw is not none and '|' in raw %}
-              {% set p = raw.split('|') %}
-              {% set new = [{
-                'time': now().strftime('%H:%M'),
-                'zone': p[0]|trim,
-                'status': p[1]|trim,
-                'target': p[2]|trim,
-                'mode': p[3]|trim
-              }] %}
-              {{ (new + current)[:10] }}
+            {% set parts = raw.split(' | ') %}
+            {% if parts | length >= 5 %}
+              {% set new_line = now().strftime('%H:%M') ~ ' | ' ~ parts[0] ~ ' | ' ~ parts[1] ~ ' | ' ~ parts[2] ~ ' | ' ~ parts[3] ~ ' | ' ~ parts[4] %}
+              {% set all_lines = (new_line + '\n' + old).split('\n') %}
+              {{ all_lines[:20] | join('\n') }}
             {% else %}
-              {{ current }}
+              {{ old }}
             {% endif %}
-
-lovelace:
-  mode: storage
-  dashboards:
-    hvac-advanced:
-      mode: yaml
-      title: "HVAC AI Monitor"
-      filename: dashboards/hvac_monitor.yaml

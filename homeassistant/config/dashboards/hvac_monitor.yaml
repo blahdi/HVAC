@@ -1,8 +1,7 @@
 # =============================================================================
 # FILE: hvac_monitor.yaml
-# VERSION: 2026.02.14.53
+# VERSION: 2026.02.14.92
 # =============================================================================
-
 title: "HVAC AI Monitor"
 views:
   - title: "Overview"
@@ -12,69 +11,74 @@ views:
       - type: vertical-stack
         cards:
           - type: entities
-            title: "Climate-Automation"
-            show_header_toggle: false
+            title: "Zones"
             entities:
-              - entity: automation.hvac_pse_ai_integrated_new
-                name: "Enable Climate Automation"
               - entity: binary_sensor.home_occupancy
+                name: "Main Home Detection"
+              - entity: sensor.home_current_temperature
+                name: "Main Home Temp"
+              - entity: media_player.living_room_tv_2
+                name: "Living Room TV"
+              - type: divider
               - entity: binary_sensor.bedroom_occupancy
+                name: "Bedroom Detection"
+              - entity: sensor.bedroom_temperature
+                name: "Bedroom Temp"
 
           - type: entities
-            title: "Gas Furnace"
+            title: "Hardware: Gas Furnace"
             entities:
               - entity: input_boolean.hvac_automation_enabled
+                name: "Enable Automation"
               - entity: climate.home
+                name: "Main Thermostat"
 
           - type: entities
-            title: "Heat Pump Units"
+            title: "Hardware: Heat Pumps"
             entities:
-              - entity: binary_sensor.hvac_energy_monitor_hvac_activity_status
-                name: "Compressor State"
-              - entity: climate.della_living_room
+              - entity: input_boolean.heatpump_automation_enabled
+                name: "Enable Automation"
               - entity: climate.della_mini_master_bedroom
+                name: "Master Bedroom"
+              - entity: climate.della_living_room
+                name: "Living Room (Main)"
               - entity: climate.della_main_door
+                name: "Living Room (Door)"
               - entity: climate.della_mini_guest
-
-          - type: markdown
-            content: "Dashboard Version: **2026.02.14.53**"
+                name: "Guest Room"
 
       - type: vertical-stack
         cards:
-          - type: markdown
-            title: "Climate Automation History"
-            content: |
-              <div style="overflow-x:auto; font-family: 'Courier New', monospace; line-height: 1.4;">
-              <pre>
-              <b>TIME   ZONE     STATUS     TARGET  MODE</b>
-              <hr style="margin: 5px 0; border-top: 1px solid #444;">
-              {% set hist = state_attr('sensor.hvac_story_database', 'history') %}
-              {% if hist is not none and hist is iterable %}
-                {% for e in hist %}
-                {{ e.time.ljust(7) }}{{ e.zone.ljust(9) }}{{ e.status.ljust(11) }}{{ e.target.ljust(8) }}{{ e.mode }}
-                {% endfor %}
-              {% else %}
-              No history recorded. Toggle automation to begin.
-              {% endif %}
-              </pre>
-              </div>
+          - type: entities
+            title: "Heat Pump Electrical Panel"
+            entities:
+              - entity: sensor.total_hvac_power
+                name: "Total HVAC Power"
+              - entity: sensor.heatpump_total_current
+                name: "Heatpump Total Current"
+              - entity: sensor.tuya_bridge_voltage
+                name: "Tuya Bridge Voltage"
 
           - type: horizontal-stack
             cards:
               - type: gauge
                 entity: sensor.total_hvac_power
-                name: "Power Draw"
                 max: 3000
               - type: gauge
                 entity: sensor.heatpump_total_current
-                name: "Amps"
                 max: 15
 
-          - type: entities
-            entities:
-              - entity: sensor.tuya_bridge_voltage
-
-          - type: history-graph
-            entities:
-              - entity: sensor.total_hvac_power
-            hours_to_show: 12
+          - type: markdown
+            title: "System Action History"
+            content: |
+              | TIME | HARDWARE | ZONE | STATUS | TARGET | MODE |
+              |:---|:---|:---|:---|:---|:---|
+              {% set log = state_attr('sensor.hvac_event_log', 'table_data') %}
+              {% if log %}
+                {% for line in log.split('\n') %}
+                  {% set p = line.split(' | ') %}
+                  {% if p | length >= 6 %}
+                  | {{ p[0] }} | {{ p[1] }} | {{ p[2] }} | {{ p[3] }} | {{ p[4] }} | {{ p[5] }} |
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
